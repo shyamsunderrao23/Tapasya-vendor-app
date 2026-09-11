@@ -1,0 +1,379 @@
+================================================================================
+          TAPASYA VENDOR APP - COMPLETE WORKING API SPECIFICATIONS
+================================================================================
+
+Base URL: https://tapasyaserver.sreerasthusilvers.co.in/api
+
+================================================================================
+1. VENDOR ACCEPT BOOKING API
+================================================================================
+Description: Accepts an incoming job booking request assigned to the vendor.
+
+Endpoint: POST /vendors/bookings/action
+Full URL: https://tapasyaserver.sreerasthusilvers.co.in/api/vendors/bookings/action
+Method: POST
+Headers:
+  Authorization: Bearer <AUTH_TOKEN>
+  Content-Type: application/json
+
+Request Body (JSON):
+{
+  "booking_id": "BOOKING_ID_HERE",
+  "action": "ACCEPTED"
+}
+
+Expected Response (200 OK):
+{
+  "success": true,
+  "message": "Booking accepted successfully",
+  "data": {
+    "id": "BOOKING_ID_HERE",
+    "status": "ACCEPTED",
+    "updated_at": "2026-08-31T22:00:00Z"
+  }
+}
+
+Error Response (400 / 404 / 500):
+{
+  "success": false,
+  "message": "Booking already accepted or not found"
+}
+
+
+================================================================================
+2. VENDOR DECLINE / REJECT BOOKING API
+================================================================================
+Description: Declines or rejects an incoming job booking request.
+
+Endpoint: POST /vendors/bookings/action
+Full URL: https://tapasyaserver.sreerasthusilvers.co.in/api/vendors/bookings/action
+Method: POST
+Headers:
+  Authorization: Bearer <AUTH_TOKEN>
+  Content-Type: application/json
+
+Request Body (JSON):
+{
+  "booking_id": "BOOKING_ID_HERE",
+  "action": "REJECTED"
+}
+
+Expected Response (200 OK):
+{
+  "success": true,
+  "message": "Booking rejected successfully"
+}
+
+Error Response (400 / 404):
+{
+  "success": false,
+  "message": "Unable to reject booking"
+}
+
+
+================================================================================
+3. VENDOR UPDATE BOOKING STATUS TO STARTED (JOB IN-PROGRESS)
+================================================================================
+Description: Marks the job status as STARTED when vendor arrives at customer location.
+
+Endpoint: POST /vendors/bookings/action
+Full URL: https://tapasyaserver.sreerasthusilvers.co.in/api/vendors/bookings/action
+Method: POST
+Headers:
+  Authorization: Bearer <AUTH_TOKEN>
+  Content-Type: application/json
+
+Request Body (JSON):
+{
+  "booking_id": "BOOKING_ID_HERE",
+  "action": "STARTED"
+}
+
+Expected Response (200 OK):
+{
+  "success": true,
+  "message": "Job marked as STARTED",
+  "status": "STARTED"
+}
+
+
+================================================================================
+4. SEND JOB COMPLETION OTP API
+================================================================================
+Description: Sends a 6-digit verification OTP to the customer's mobile number
+             when the vendor finishes the work.
+
+Endpoint: POST /vendors/bookings/{booking_id}/send-completion-otp
+Full URL: https://tapasyaserver.sreerasthusilvers.co.in/api/vendors/bookings/{booking_id}/send-completion-otp
+Method: POST
+Headers:
+  Authorization: Bearer <AUTH_TOKEN>
+  Content-Type: application/json
+
+Request Body:
+(Empty body - Booking ID is passed in the URL path)
+
+Expected Response (200 OK):
+{
+  "success": true,
+  "message": "OTP sent successfully to customer"
+}
+
+Error Response (400 / 500):
+{
+  "success": false,
+  "message": "Failed to send OTP to customer"
+}
+
+
+================================================================================
+5. VERIFY JOB COMPLETION OTP API
+================================================================================
+Description: Verifies the 6-digit OTP provided by customer. Upon verification,
+             the booking status becomes COMPLETED and payout is triggered.
+
+Endpoint: POST /vendors/bookings/{booking_id}/verify-otp
+Full URL: https://tapasyaserver.sreerasthusilvers.co.in/api/vendors/bookings/{booking_id}/verify-otp
+Method: POST
+Headers:
+  Authorization: Bearer <AUTH_TOKEN>
+  Content-Type: application/json
+
+Request Body (JSON):
+{
+  "booking_id": "BOOKING_ID_HERE",
+  "otp": "123456"
+}
+
+Expected Response (200 OK):
+{
+  "success": true,
+  "message": "OTP verified successfully. Job completed.",
+  "data": {
+    "booking_id": "BOOKING_ID_HERE",
+    "status": "COMPLETED",
+    "payment_status": "PAID"
+  }
+}
+
+Error Response (400 Invalid OTP):
+{
+  "success": false,
+  "message": "Invalid OTP. Please try again."
+}
+
+
+================================================================================
+6. VENDOR BANK ACCOUNT UPDATE & VERIFICATION API (CASHFREE / BACKEND)
+================================================================================
+Description: Saves and verifies the vendor's bank account details (account number,
+             IFSC, holder name, bank name) via Cashfree backend verification.
+
+Endpoint: POST /vendor/bank/verify
+Full URL: https://tapasyaserver.sreerasthusilvers.co.in/api/vendor/bank/verify
+Method: POST
+Headers:
+  Authorization: Bearer <AUTH_TOKEN>
+  Content-Type: application/json
+
+Request Body (JSON):
+{
+  "account_number": "918273645012",
+  "ifsc": "HDFC0001234",
+  "holder_name": "KIRAN KUMAR",
+  "bank_name": "HDFC Bank",
+  "vendor_id": "VENDOR_ID_HERE"
+}
+
+Expected Response (200 OK):
+{
+  "success": true,
+  "message": "Bank account verified and saved successfully",
+  "data": {
+    "vendor_id": "VENDOR_ID_HERE",
+    "account_number": "918273645012",
+    "ifsc_code": "HDFC0001234",
+    "account_holder_name": "KIRAN KUMAR",
+    "bank_name": "HDFC Bank",
+    "is_verified": true,
+    "verified_at": "2026-08-31T22:00:00Z"
+  }
+}
+
+Error Response (400 Bad Request / Invalid Bank Details):
+{
+  "success": false,
+  "message": "Bank account verification failed. Check account number and IFSC code."
+}
+
+
+================================================================================
+7. FETCH SAVED VENDOR BANK DETAILS API
+================================================================================
+Description: Retrieves saved bank details for a specific vendor.
+
+Endpoint: GET /vendor/bank/{vendor_id}
+Full URL: https://tapasyaserver.sreerasthusilvers.co.in/api/vendor/bank/{vendor_id}
+Method: GET
+Headers:
+  Authorization: Bearer <AUTH_TOKEN>
+  Accept: application/json
+
+Expected Response (200 OK):
+{
+  "success": true,
+  "data": {
+    "vendor_id": "VENDOR_ID_HERE",
+    "account_number": "918273645012",
+    "ifsc_code": "HDFC0001234",
+    "account_holder_name": "KIRAN KUMAR",
+    "bank_name": "HDFC Bank",
+    "is_verified": true
+  }
+}
+
+
+================================================================================
+8. RAZORPAY IFSC CODE LOOKUP API (PUBLIC)
+================================================================================
+Description: Fetches official bank name, branch, and city details by IFSC code.
+
+Endpoint: GET https://ifsc.razorpay.com/{IFSC_CODE}
+Method: GET
+Headers:
+  Accept: application/json
+
+Expected Response (200 OK):
+{
+  "BANK": "HDFC Bank",
+  "IFSC": "HDFC0001234",
+  "BRANCH": "HYDERABAD MAIN",
+  "ADDRESS": "ROAD NO 1, BANJARA HILLS",
+  "CITY": "HYDERABAD",
+  "STATE": "TELANGANA"
+}
+
+
+================================================================================
+9. VENDOR PAYOUT & TRANSACTIONS HISTORY API
+================================================================================
+Description: Retrieves financial transactions, completed job earnings, and payouts.
+
+Endpoint: GET /vendors/transactions
+Full URL: https://tapasyaserver.sreerasthusilvers.co.in/api/vendors/transactions
+Method: GET
+Headers:
+  Authorization: Bearer <AUTH_TOKEN>
+  Accept: application/json
+
+Expected Response (200 OK):
+{
+  "success": true,
+  "data": [
+    {
+      "id": "TX_1001",
+      "booking_id": "BK_5542",
+      "type": "earning",
+      "amount": 450.00,
+      "status": "completed",
+      "created_at": "2026-08-31T18:30:00Z"
+    },
+    {
+      "id": "TX_1002",
+      "booking_id": null,
+      "type": "payout",
+      "amount": 1200.00,
+      "status": "success",
+      "created_at": "2026-08-30T10:00:00Z"
+    }
+  ]
+}
+
+
+================================================================================
+10. DART IMPLEMENTATION REFERENCE (ApiService Methods)
+================================================================================
+
+// Accept Booking
+Future<Map<String, dynamic>> acceptBooking(String token, String bookingId, String vendorId) async {
+  return bookingAction(token, bookingId, vendorId, "ACCEPTED");
+}
+
+// Decline / Reject Booking
+Future<Map<String, dynamic>> rejectBooking(String token, String bookingId, String vendorId) async {
+  return bookingAction(token, bookingId, vendorId, "REJECTED");
+}
+
+// Booking Action Generic Method
+Future<Map<String, dynamic>> bookingAction(String token, String bookingId, String vendorId, String action) async {
+  final url = Uri.parse('https://tapasyaserver.sreerasthusilvers.co.in/api/vendors/bookings/action');
+  final response = await http.post(
+    url,
+    headers: {
+      'Authorization': 'Bearer $token',
+      'Content-Type': 'application/json',
+    },
+    body: jsonEncode({
+      "booking_id": bookingId,
+      "action": action
+    }),
+  );
+  return jsonDecode(response.body);
+}
+
+// Send Completion OTP
+Future<Map<String, dynamic>> sendCompletionOtp(String token, String bookingId) async {
+  final url = Uri.parse('https://tapasyaserver.sreerasthusilvers.co.in/api/vendors/bookings/$bookingId/send-completion-otp');
+  final response = await http.post(
+    url,
+    headers: {
+      'Authorization': 'Bearer $token',
+      'Content-Type': 'application/json',
+    },
+  );
+  return jsonDecode(response.body);
+}
+
+// Verify Completion OTP
+Future<Map<String, dynamic>> verifyCompletionOtp(String token, String bookingId, String otp) async {
+  final url = Uri.parse('https://tapasyaserver.sreerasthusilvers.co.in/api/vendors/bookings/$bookingId/verify-otp');
+  final response = await http.post(
+    url,
+    headers: {
+      'Authorization': 'Bearer $token',
+      'Content-Type': 'application/json',
+    },
+    body: jsonEncode({
+      "booking_id": bookingId,
+      "otp": otp
+    }),
+  );
+  return jsonDecode(response.body);
+}
+
+// Update & Verify Bank Account
+Future<Map<String, dynamic>?> updateBankDetails(
+  String token,
+  String bankName,
+  String accountNumber,
+  String ifscCode,
+  String holderName,
+  String vendorId,
+) async {
+  final url = Uri.parse('https://tapasyaserver.sreerasthusilvers.co.in/api/vendor/bank/verify');
+  final response = await http.post(
+    url,
+    headers: {
+      'Authorization': 'Bearer $token',
+      'Content-Type': 'application/json',
+    },
+    body: jsonEncode({
+      'account_number': accountNumber,
+      'ifsc': ifscCode,
+      'holder_name': holderName,
+      'bank_name': bankName,
+      'vendor_id': vendorId,
+    }),
+  );
+  return jsonDecode(response.body);
+}

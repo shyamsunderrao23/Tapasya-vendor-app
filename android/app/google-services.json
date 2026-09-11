@@ -1,0 +1,76 @@
+{
+  "project_info": {
+    "project_number": "235317509482",
+    "project_id": "tapasya-app-and-web",
+    "storage_bucket": "tapasya-app-and-web.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:235317509482:android:5bb7950b8c4c90483df913",
+        "android_client_info": {
+          "package_name": "com.example.tapasya_vendor_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA0duK_n_ZsZ57DVBP_VSyvhcJj-6F6J-U"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:235317509482:android:8bb9f9942bc9825a3df913",
+        "android_client_info": {
+          "package_name": "com.tapasya.mobile"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "235317509482-tq2aip9od4rq2j0ghbh1i7ugjeh4bvmu.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.tapasya.mobile",
+            "certificate_hash": "93a71c599bf410895d12ebc124e52e2094a7b2ef"
+          }
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA0duK_n_ZsZ57DVBP_VSyvhcJj-6F6J-U"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:235317509482:android:d105fc89c849a4263df913",
+        "android_client_info": {
+          "package_name": "com.tapasya.vendor"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA0duK_n_ZsZ57DVBP_VSyvhcJj-6F6J-U"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

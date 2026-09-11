@@ -1,0 +1,71 @@
+### Edit Profile API Details
+
+**Endpoint**: `PUT /vendors/profile`
+**Content-Type**: `multipart/form-data` (Required because of profile picture upload)
+**Authorization**: Bearer Token required in headers
+
+---
+
+### Request Payload (Form Data Fields)
+
+Since this API requires image uploading, it is a `multipart/form-data` request rather than a raw JSON body. Below are the fields that the backend expects:
+
+**Required Fields:**
+- `name` (String)
+- `phone` (String)
+- `address` (String)
+- `email` (String)
+
+**Optional Fields:**
+- `fathers_name` (String)
+- `dob` (String) - Format usually "YYYY-MM-DD"
+- `gender` (String) - e.g., "Male", "Female", "Other"
+- `whatsapp_number` (String)
+- `secondary_mobile_number` (String)
+- `city` (String)
+- `languages` (Stringified JSON Array) - e.g., `["English", "Hindi"]`
+- `job_mode` (String) - e.g., "auto" or "manual"
+- `profile_pic` (File) - The actual image file for the profile picture
+
+---
+
+### Equivalent JSON Representation
+If you were just testing the data structure without an image, it would look like this in JSON format:
+
+```json
+{
+  "name": "John Doe",
+  "phone": "9876543210",
+  "address": "123 Main Street",
+  "email": "johndoe@example.com",
+  "fathers_name": "Robert Doe",
+  "dob": "1990-05-15",
+  "gender": "Male",
+  "whatsapp_number": "9876543210",
+  "secondary_mobile_number": "9123456780",
+  "city": "Mumbai",
+  "languages": "[\"English\", \"Hindi\"]",
+  "job_mode": "auto"
+}
+```
+
+### Expected Response
+
+**Success Response (200 OK):**
+```json
+{
+  "success": true,
+  "message": "Profile updated successfully",
+  "data": {
+    // updated vendor profile object
+  }
+}
+```
+
+**Error Response:**
+```json
+{
+  "success": false,
+  "message": "Error description here"
+}
+```

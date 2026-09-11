@@ -1,0 +1,124 @@
+================================================================================
+          TAPASYA VENDOR APP - VENDOR JOB ACCEPT & DECLINE API DOCS
+================================================================================
+
+BASE URL:
+https://tapasyaserver.sreerasthusilvers.co.in/api
+
+--------------------------------------------------------------------------------
+1. ACCEPT BOOKING API
+--------------------------------------------------------------------------------
+HTTP Method  : POST
+Endpoint     : /vendors/bookings/action
+Full URL     : https://tapasyaserver.sreerasthusilvers.co.in/api/vendors/bookings/action
+
+Headers:
+- Content-Type : application/json
+- Authorization: Bearer <AUTH_TOKEN>
+
+Request Body (JSON):
+{
+  "booking_id": "YOUR_BOOKING_ID_HERE",
+  "action": "ACCEPTED"
+}
+
+Sample Success Response (200 OK):
+{
+  "success": true,
+  "message": "Booking status updated successfully",
+  "data": {
+    "booking_id": "65f1a2b3c4d5e6f7a8b9c0d1",
+    "status": "ACCEPTED",
+    "updated_at": "2026-09-01T10:45:00.000Z"
+  }
+}
+
+Sample Error Response (400 Bad Request / 404 Not Found):
+{
+  "success": false,
+  "message": "Booking not found"
+}
+
+
+--------------------------------------------------------------------------------
+2. DECLINE / REJECT BOOKING API
+--------------------------------------------------------------------------------
+HTTP Method  : POST
+Endpoint     : /vendors/bookings/action
+Full URL     : https://tapasyaserver.sreerasthusilvers.co.in/api/vendors/bookings/action
+
+Headers:
+- Content-Type : application/json
+- Authorization: Bearer <AUTH_TOKEN>
+
+Request Body (JSON):
+{
+  "booking_id": "YOUR_BOOKING_ID_HERE",
+  "action": "REJECTED"
+}
+
+Sample Success Response (200 OK):
+{
+  "success": true,
+  "message": "Booking rejected successfully",
+  "data": {
+    "booking_id": "65f1a2b3c4d5e6f7a8b9c0d1",
+    "status": "REJECTED"
+  }
+}
+
+
+--------------------------------------------------------------------------------
+3. GET BOOKING DETAILS API
+--------------------------------------------------------------------------------
+HTTP Method  : GET
+Endpoint     : /admin/bookings/<BOOKING_ID>
+Full URL     : https://tapasyaserver.sreerasthusilvers.co.in/api/admin/bookings/<BOOKING_ID>
+
+Headers:
+- Accept       : application/json
+- Authorization: Bearer <AUTH_TOKEN>
+
+
+--------------------------------------------------------------------------------
+4. GET VENDOR BOOKINGS LIST API
+--------------------------------------------------------------------------------
+HTTP Method  : GET
+Endpoint     : /vendors/bookings?status=<status>&page=<page>&limit=<limit>
+Full URL     : https://tapasyaserver.sreerasthusilvers.co.in/api/vendors/bookings?status=ACCEPTED&page=1&limit=10
+
+Headers:
+- Accept       : application/json
+- Authorization: Bearer <AUTH_TOKEN>
+
+
+================================================================================
+          HOW THE VENDOR ACCEPT & DECLINE FUNCTIONALITY WORKS (END-TO-END)
+================================================================================
+
+1. NEW JOB ALERT ARRIVAL:
+   - Customer books a service on the Customer App.
+   - Backend sends real-time alert via WebSocket ("new_job" event) and FCM Push Notification.
+   - App checks if Vendor is logged in and Online (active_status == 1).
+   - Loud chime sound ('new_job_alert.wav') loops and device vibrates.
+   - App pops up the full-screen interactive overlay (JobRequestScreen).
+
+2. VENDOR CLICKS "ACCEPT JOB":
+   - Audio chime and vibration stop immediately.
+   - App calls ApiService().acceptBooking(token, bookingId, vendorId).
+   - API sends POST /vendors/bookings/action with {"booking_id": bookingId, "action": "ACCEPTED"}.
+   - On success (200 OK):
+     a. Booking is marked handled in local cache so duplicate popups won't show.
+     b. Local state (VendorProvider) refreshes jobs list.
+     c. Request popup overlay closes.
+     d. App automatically navigates the vendor directly to JobDetailsScreen.
+
+3. VENDOR CLICKS "DECLINE":
+   - Audio chime and vibration stop immediately.
+   - App calls ApiService().rejectBooking(token, bookingId, vendorId).
+   - API sends POST /vendors/bookings/action with {"booking_id": bookingId, "action": "REJECTED"}.
+   - On success (200 OK):
+     a. Booking is marked handled and removed from pending queue.
+     b. Local state (VendorProvider) refreshes dashboard.
+     c. Request popup overlay closes.
+     d. Toast message "Job declined" is shown to vendor.

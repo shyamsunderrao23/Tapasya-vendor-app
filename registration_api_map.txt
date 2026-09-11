@@ -1,0 +1,37 @@
+### Tapasya Vendor App - Registration API Documentation (Step 2 to Step 3)
+
+Below is the breakdown of the APIs used in the transition from Step 2 (Services) to Step 3 (Job Mode).
+
+---
+
+#### 🛠️ STEP 2: Services Offered
+**File:** `step_2_services_screen.dart`
+
+1. **Master Data APIs (Fetching):**
+   - `GET /services`: Used to fetch the list of available main services.
+   - `GET /sub-services/:id`: Used to fetch sub-services for a selected main service.
+   - `GET /vendor-services`: Used to sync what the vendor has already selected in the past.
+
+2. **Persistence API (Saving):**
+   - **`POST /register-vendor`**: This is the **same high-fidelity API** used in Step 1. 
+   - **Why?** It ensures that as you add services, the backend keeps your profile data (Name, City, Languages) perfectly in sync. It sends the `services` array along with existing profile data.
+
+---
+
+#### 🛠️ STEP 3: Job Assignment Mode
+**File:** `step_3_job_mode_screen.dart`
+
+1. **Persistence API (Saving):**
+   - **`POST /update-job-mode`**: This is a **specialized API** for Step 3.
+   - **Why?** The Job Mode (Automatic vs Manual) is a standalone configuration. This API specifically updates the `jobMode` field in the database.
+
+---
+
+### Summary Table
+| Registration Step | API Endpoint Used | Description |
+| :--- | :--- | :--- |
+| **Step 1 (Details)** | `/register-vendor` | Saves core profile & profile pic. |
+| **Step 2 (Services)** | `/register-vendor` | Saves chosen services (Bulk Save). |
+| **Step 3 (Job Mode)** | `/update-job-mode` | Saves assignment preference. |
+
+**Observation:** Yes, Step 1 and Step 2 share the same core Registration API to maintain data integrity, but Step 3 moves to a specialized update API.

@@ -1,0 +1,92 @@
+# Table of Contents
+1. [Successful Login/Registration Response](#successful-loginregistration-response)
+2. [Field Descriptions](#field-descriptions)
+3. [Error Responses](#error-responses)
+
+## Successful Login/Registration Response
+
+Below is the JSON structure expected by the Tapasya Vendor App after a successful login or registration via the `/vendors/login` or `/vendors/register` endpoints.
+
+```json
+{
+  "success": true,
+  "message": "Login successful",
+  "data": {
+    "jwt_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "vendor": {
+      "id": "v-7890-4d56-b123-abcdef123456",
+      "fullName": "John Doe",
+      "fatherName": "Robert Doe",
+      "dob": "15-05-1990",
+      "gender": "male",
+      "age": 34,
+      "email": "john.doe@example.com",
+      "whatsappNumber": "9876543210",
+      "secondaryPhone": "9123456789",
+      "city": "Hyderabad",
+      "address": "123, Jubilee Hills, Hyderabad",
+      "lat": 17.4399,
+      "lng": 78.4121,
+      "jobMode": "auto",
+      "aadharStatus": "approved",
+      "panStatus": "approved",
+      "bankStatus": "approved",
+      "faceStatus": "approved",
+      "status": "active",
+      "languages": ["English", "Hindi", "Telugu"],
+      "services": [
+        {
+          "service_id": "s-101",
+          "service_name": "AC Repair",
+          "sub_service_id": "ss-201",
+          "sub_service_name": "Split AC Service",
+          "experience_years": 5
+        }
+      ],
+      "availability": [
+        {
+          "day": "Monday",
+          "start_time": "09:00:00",
+          "end_time": "18:00:00",
+          "is_available": 1
+        }
+      ]
+    }
+  }
+}
+```
+
+## Field Descriptions
+
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `success` | Boolean | Indicates if the request was successful. |
+| `message` | String | A human-readable message from the server. |
+| `data.jwt_token` | String | The authentication token to be used for subsequent requests. |
+| `data.vendor.id` | String (UUID) | Unique identifier for the vendor. |
+| `data.vendor.fullName` | String | Vendor's full name. |
+| `data.vendor.aadharStatus` | String | Status of Aadhar verification (`pending`, `submitted`, `approved`, `rejected`). |
+| `data.vendor.status` | String | overall account status (`active`, `pending`, `inactive`). |
+| `data.vendor.services` | Array | List of services the vendor is registered for. |
+| `data.vendor.availability` | Array | Weekly working hours configuration. |
+
+## Error Responses
+
+### 401 Unauthorized (Invalid Token)
+```json
+{
+  "success": false,
+  "message": "Unauthorized: Invalid or expired Firebase token"
+}
+```
+
+### 403 Forbidden (Vendor Not Found / Profile Incomplete)
+```json
+{
+  "success": false,
+  "message": "Vendor profile not found. Please register.",
+  "data": {
+    "is_registered": false
+  }
+}
+```

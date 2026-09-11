@@ -1,0 +1,20 @@
+JOB MODE API DETAILS
+--------------------------------------------------
+Endpoint: https://tapasyaserver.sreerasthusilvers.co.in/api/vendors/profile
+Method: PUT
+Format: multipart/form-data
+
+Headers:
+- Authorization: Bearer <AUTH_TOKEN>
+- Accept: application/json
+
+Fields for Job Mode:
+- job_mode: "auto" (for Automatic Assignment)
+- job_mode: "manual" (for Manual Selection)
+
+Logic used in Flutter side:
+1. UI collects "Automatic" or "Manual".
+2. App maps "Automatic" -> "auto" and "Manual" -> "manual".
+3. PUT request is sent with the 'job_mode' field to the URL above.
+--------------------------------------------------
+Created by Antigravity on 2026-04-16

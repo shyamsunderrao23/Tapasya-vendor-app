@@ -1,0 +1,12 @@
+The Monthly Reports screen (`reports_screen.dart`) generates all of its data natively on the app by calculating stats from the Transactions API. 
+
+Here is the exact API used to populate the charts, statistics, and history on that screen:
+
+API Endpoint:
+GET `baseurl/vendors/transactions`
+
+Dart Method: 
+`getTransactions(String token)` in `api_service.dart`
+
+How it works:
+The app fetches your entire transaction history from this API. When you select a specific month (like "April 2026"), the app filters the transactions for that month, and then manually adds up the `final_amount` and counts the number of jobs per day to draw the Earnings Trend and Earnings Distribution charts!

@@ -1,0 +1,32 @@
+INVESTIGATION REPORT: MISSING JOB NOTIFICATIONS
+---------------------------------------------
+Date: 2026-04-07
+Project: Tapasya Vendor App
+Status: Resolved (Flutter Logic Fix)
+
+PROBLEM DESCRIPTION:
+Vendors were not consistently receiving job notifications after a user booking. Both real-time (Socket) and push (FCM) alerts were affected.
+
+ROOT CAUSE ANALYSIS:
+The investigation identified a critical "Race Condition" in the HomeScreen initialization.
+
+1. ASYNCHRONOUS OVERLAP: 
+   The app was triggering 'initFCM()' and 'saveTokenToBackend()' simultaneously. 'initFCM' requires a 2-4 second delay to request user permission and retrieve the FCM token from Google. However, 'saveTokenToBackend' was attempting to read the token immediately on launch. This resulted in a 'null' token being sent to the backend server.
+
+2. TOKEN SYNCHRONIZATION:
+   The backend was not receiving the updated device token for new registrations or token refreshes, meaning it was sending notifications to "nowhere" or to stale, invalid tokens.
+
+3. TOPIC MANAGEMENT:
+   The app lacked logic to subscribe to broadcast topics (e.g., 'all_vendors'), which is often used for high-volume job distribution.
+
+RESOLUTION SUMMARY (APPLIED):
+- Sequentialized the notification lifecycle: Permission -> Retrieval -> Validation -> Backend Upload.
+- Implemented an 'Auto-Update' listener that pushes new FCM tokens to the backend instantly if they change while the app is active.
+- Added descriptive console logging [FCM] for better live debugging.
+
+VERIFICATION:
+- Confirming Status 200 on 'POST /vendors/save-fcm-token'.
+- Verified non-null token in 'debugPrint' logs.
+
+FIXED BY: Antigravity AI
+---------------------------------------------

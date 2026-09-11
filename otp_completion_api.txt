@@ -1,0 +1,141 @@
+====================================================================
+               OTP COMPLETION API SPECIFICATION & DART CODE
+====================================================================
+
+Base URL: https://tapasyaserver.sreerasthusilvers.co.in/api
+
+--------------------------------------------------------------------
+1. SEND OTP FOR JOB COMPLETION API
+--------------------------------------------------------------------
+
+Endpoint: POST /vendors/bookings/{bookingId}/send-completion-otp
+Full URL: https://tapasyaserver.sreerasthusilvers.co.in/api/vendors/bookings/{bookingId}/send-completion-otp
+Method: POST
+Headers:
+  Authorization: Bearer <AUTH_TOKEN>
+  Content-Type: application/json
+
+Request Body:
+  (None / Empty Body)
+
+Response (200 OK):
+  {
+    "success": true,
+    "message": "OTP sent successfully to customer"
+  }
+
+Error Response (e.g. 400/500):
+  {
+    "success": false,
+    "message": "Failed to send OTP"
+  }
+
+
+--------------------------------------------------------------------
+2. VERIFY OTP TO COMPLETE JOB API
+--------------------------------------------------------------------
+
+Endpoint: POST /vendors/bookings/{bookingId}/verify-otp
+Full URL: https://tapasyaserver.sreerasthusilvers.co.in/api/vendors/bookings/{bookingId}/verify-otp
+Method: POST
+Headers:
+  Authorization: Bearer <AUTH_TOKEN>
+  Content-Type: application/json
+
+Request Body (JSON):
+  {
+    "booking_id": "BOOKING_ID_HERE",
+    "otp": "123456"
+  }
+
+Response (200 OK):
+  {
+    "success": true,
+    "message": "OTP verified successfully. Service completed."
+  }
+
+Error Response (e.g. 400 Invalid OTP):
+  {
+    "success": false,
+    "message": "Invalid OTP. Please check and try again."
+  }
+
+
+--------------------------------------------------------------------
+3. DART CODE IMPLEMENTATION (ApiService)
+--------------------------------------------------------------------
+
+// Location: lib/services/api_service.dart
+
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+
+class ApiService {
+  static const String _baseUrl = 'https://tapasyaserver.sreerasthusilvers.co.in/api';
+
+  /// 1. Sends an OTP to the customer for job completion verification
+  Future<Map<String, dynamic>> sendCompletionOtp(String token, String bookingId) async {
+    final url = Uri.parse('$_baseUrl/vendors/bookings/$bookingId/send-completion-otp');
+    try {
+      final response = await _authPost(url, token: token);
+      print("📤 [SEND OTP SUBMIT] URL: $url");
+      print("📥 [SEND OTP RESPONSE] Status: ${response.statusCode} | Body: ${response.body}");
+      return jsonDecode(response.body);
+    } catch (e) {
+      return {"success": false, "message": "Exception: $e"};
+    }
+  }
+
+  /// 2. Verifies the customer OTP to complete the job
+  Future<Map<String, dynamic>> verifyCompletionOtp(String token, String bookingId, String otp) async {
+    final url = Uri.parse('$_baseUrl/vendors/bookings/$bookingId/verify-otp');
+    try {
+      final response = await _authPost(
+        url,
+        token: token,
+        body: jsonEncode({
+          "booking_id": bookingId,
+          "otp": otp
+        }),
+      );
+      print("📤 [VERIFY OTP SUBMIT] URL: $url | OTP: $otp");
+      print("📥 [VERIFY OTP RESPONSE] Status: ${response.statusCode} | Body: ${response.body}");
+      return jsonDecode(response.body);
+    } catch (e) {
+      return {"success": false, "message": "Exception: $e"};
+    }
+  }
+}
+
+
+--------------------------------------------------------------------
+4. DART FLUTTER UI USAGE EXAMPLE
+--------------------------------------------------------------------
+
+// Example usage in UI (Modal or Screen):
+
+// Step A: Trigger Send OTP
+Future<void> _sendOtp(String bookingId) async {
+  final prefs = await SharedPreferences.getInstance();
+  final token = prefs.getString('auth_token') ?? '';
+
+  final res = await ApiService().sendCompletionOtp(token, bookingId);
+  if (res['success'] == true) {
+    print("OTP sent to customer!");
+  } else {
+    print("Error: ${res['message']}");
+  }
+}
+
+// Step B: Verify Entered OTP Pin
+Future<void> _verifyOtp(String bookingId, String pin) async {
+  final prefs = await SharedPreferences.getInstance();
+  final token = prefs.getString('auth_token') ?? '';
+
+  final res = await ApiService().verifyCompletionOtp(token, bookingId, pin);
+  if (res['success'] == true) {
+    print("Job Completed Successfully!");
+  } else {
+    print("Error: ${res['message']}");
+  }
+}

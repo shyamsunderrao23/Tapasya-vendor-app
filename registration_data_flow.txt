@@ -1,0 +1,40 @@
+TAPASYA VENDOR APP - REGISTRATION DATA FLOW SUMMARY
+
+1. HOW DATA IS SAVED:
+--------------------
+The application uses a dual-save mechanism to ensure no data is lost during the 6-step registration process:
+
+A. LOCAL PERSISTENCE (SharedPreferences):
+   - The 'RegistrationState' class (managed via Provider) holds all current form data.
+   - Every time a field is updated, 'saveToLocal()' is triggered.
+   - All data is serialized into a single JSON string and saved under the key 'vendor_onboarding'.
+   - This allows the vendor to close the app at Step 3 and resume from the exact same spot later.
+
+B. BACKEND PERSISTENCE (PostgreSQL via Express API):
+   - Data is "pushed" to the server at specific checkpoints:
+     - After Step 1 (Personal Details): A partial vendor profile is created on the server.
+     - During Step 6 (Verification): Documents (Aadhar, PAN, Bank, Selfie) are sent individually.
+     - Final Step: The account is activated and marked as 'active' after all docs are approved.
+
+2. TOTAL API CALLS FOR COMPLETE REGISTRATION:
+---------------------------------------------
+For a brand new vendor completing the registration from start to finish, the app makes approximately 13 to 15 API calls to the backend:
+
+1.  Auth Check: loginVendor/getVendorByPhone (Check if exists)
+2.  Data Recovery: getMyVendor (Fetch existing progress if returning)
+3.  Main Registration: registerVendor (POSTs details + Profile Pic)
+4.  Service List: getServices (Fetch categories)
+5.  Service Detail: getSubServices (Fetch sub-categories)
+6.  Aadhar Upload: uploadAadhar (POSTs Front/Back images)
+7.  PAN Upload: verifyPan (POSTs PAN image)
+8.  Bank Sync: verifyBank (POSTs account details)
+9.  Face Match: faceMatch (POSTs selfie vs document match)
+10. Token Refresh: loginVendor (Exchange Firebase token for Backend JWT)
+11. Activation: toggleVendorStatus (Sets vendor to 'Active' status)
+12. RPD Creation: createRPD (Generates payment request)
+13. RPD Status: checkRPDStatus (Usually called 1-3 times to confirm payment)
+
+TOTAL ESTIMATE: ~14 Calls (Can vary slightly based on retries or service selections).
+
+Verified by: Antigravity AI
+Date: 2026-04-13

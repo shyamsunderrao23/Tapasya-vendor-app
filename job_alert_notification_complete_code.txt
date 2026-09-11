@@ -1,0 +1,357 @@
+====================================================================
+      COMPLETE JOB ALERT NOTIFICATION CODE (BACKEND + FLUTTER)
+====================================================================
+
+--------------------------------------------------------------------
+PART 1: FIXED BACKEND NODE.JS CODE (performVendorAssignment)
+--------------------------------------------------------------------
+
+// Copy and replace this in your Backend controller (e.g. bookingController.js)
+
+const { v4: uuidv4 } = require("uuid");
+const moment = require("moment");
+
+// 1. Helper function for creating vendor notification in DB
+const createVendorNotification = async ({ vendor_id, type, title, message, booking_id }) => {
+  try {
+    await pool.query(
+      `INSERT INTO vendor_notifications (id, vendor_id, type, title, message, booking_id, is_read, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, 0, NOW())`,
+      [uuidv4(), vendor_id, type, title, message, booking_id]
+    );
+  } catch (err) {
+    console.error("⚠️ Warning: Could not create vendor notification in DB:", err.message);
+  }
+};
+
+// 2. Perform Vendor Assignment Function
+const performVendorAssignment = async (booking_id) => {
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+
+    const [[booking]] = await conn.query(`SELECT * FROM bookings WHERE id=?`, [booking_id]);
+    if (!booking) {
+      await conn.rollback();
+      console.log("❌ Booking not found");
+      return { assigned: false };
+    }
+
+    const bookingDay = moment(booking.scheduled_time).format("dddd");
+    const bookingTime = moment(booking.scheduled_time).format("HH:mm:ss");
+
+    const [services] = await conn.query(
+      `SELECT service_id, sub_service_id FROM booking_items WHERE booking_id=?`,
+      [booking_id]
+    );
+
+    if (!services || services.length === 0) {
+      await conn.rollback();
+      console.log("❌ No service items found for booking");
+      return { assigned: false };
+    }
+
+    const conditions = services
+      .map(() => `(vs.service_id=? AND vs.sub_service_id=?)`)
+      .join(" OR ");
+    const values = services.flatMap(s => [s.service_id, s.sub_service_id]);
+
+    // Query active matching vendors within 10 km
+    const [vendors] = await conn.query(
+      `SELECT DISTINCT
+          v.id,
+          v.job_mode,
+          v.gender,
+          (
+            6371 * ACOS(
+              COS(RADIANS(?)) *
+              COS(RADIANS(v.lat)) *
+              COS(RADIANS(v.lng) - RADIANS(?)) +
+              SIN(RADIANS(?)) *
+              SIN(RADIANS(v.lat))
+            )
+          ) AS distance
+      FROM vendors v
+      JOIN vendor_services vs ON vs.vendor_id = v.id
+      JOIN vendor_availability va ON va.vendor_id = v.id
+      WHERE v.active_status = 1
+         AND vs.status = 1
+         AND va.is_available = 1
+         AND LOWER(va.day) = LOWER(?)
+         AND ? BETWEEN va.start_time AND va.end_time
+         AND (${conditions})
+         AND NOT EXISTS (
+          SELECT 1 FROM bookings b
+          WHERE b.vendor_id = v.id AND b.status IN ('accepted', 'ongoing')
+         )
+      HAVING distance <= 10
+      ORDER BY distance ASC`,
+      [
+        booking.lat,
+        booking.lng,
+        booking.lat,
+        bookingDay,
+        bookingTime,
+        ...values
+      ]
+    );
+
+    console.log(`📦 Real matching vendors found: ${vendors.length}`);
+
+    if (vendors.length === 0) {
+      await conn.commit();
+      console.log("❌ No vendors matched strict conditions");
+      return { assigned: false };
+    }
+
+    // Gender Filter
+    const preferredGender = (booking.preferred_vendor_gender || "any").toLowerCase();
+    const filteredVendors = vendors.filter((vendor) => {
+      if (preferredGender === "both" || preferredGender === "any") return true;
+      return vendor.gender && vendor.gender.toLowerCase() === preferredGender;
+    });
+
+    if (filteredVendors.length === 0) {
+      await conn.commit();
+      console.log(`❌ No vendors matched gender preference: ${preferredGender}`);
+      return { assigned: false };
+    }
+
+    let assigned = false;
+    let assignedVendorId = null;
+
+    // A) AUTO MODE ASSIGNMENT
+    for (const vendor of filteredVendors) {
+      if (!assigned && vendor.job_mode === "auto") {
+        const [result] = await conn.query(
+          `UPDATE bookings SET vendor_id=?, status='accepted' WHERE id=? AND vendor_id IS NULL`,
+          [vendor.id, booking_id]
+        );
+
+        if (result.affectedRows === 0) continue;
+
+        assigned = true;
+        assignedVendorId = vendor.id;
+
+        await conn.query(
+          `INSERT INTO booking_vendor_assignments (id, booking_id, vendor_id, status) VALUES (?, ?, ?, ?)`,
+          [uuidv4(), booking_id, vendor.id, "accepted"]
+        );
+
+        // Notify DB Notification Center
+        await createVendorNotification({
+          vendor_id: vendor.id,
+          type: "job",
+          title: "New Job Assigned",
+          message: "A new booking has been automatically assigned to you.",
+          booking_id
+        });
+
+        // 🔥 SOCKET EMIT (Auto Job)
+        const socketId = global.activeVendors?.[vendor.id];
+        if (global.io && socketId) {
+          global.io.to(socketId).emit("job_assigned", {
+            booking_id,
+            status: "accepted",
+            mode: "auto"
+          });
+        }
+
+        // 🔥 FCM PUSH NOTIFICATION (Auto Job)
+        const [vendorRow] = await conn.query("SELECT fcm_token FROM vendors WHERE id=?", [vendor.id]);
+        if (vendorRow?.length > 0 && vendorRow[0].fcm_token && adminSdk) {
+          const [[customer]] = await conn.query(`SELECT name FROM users WHERE id=?`, [booking.user_id]);
+          const [[serviceInfo]] = await conn.query(
+            `SELECT ss.sub_service_name FROM booking_items bi JOIN sub_services ss ON ss.id = bi.sub_service_id WHERE bi.booking_id=? LIMIT 1`,
+            [booking_id]
+          );
+
+          const distanceKm = Number(vendor.distance || 0).toFixed(1);
+
+          await adminSdk.messaging().send({
+            token: vendorRow[0].fcm_token,
+            notification: {
+              title: "Job Assigned Successfully",
+              body: `Customer: ${customer?.name || "Customer"} | ${distanceKm} km | ${serviceInfo?.sub_service_name || "Service"}`
+            },
+            data: {
+              booking_id: booking_id.toString(),
+              type: "job_assigned",
+              mode: "auto",
+              user_name: (customer?.name || "Customer").toString(),
+              distance_km: distanceKm.toString(),
+              service_name: (serviceInfo?.sub_service_name || "Service").toString(),
+              lat: booking.lat?.toString() || "",
+              lng: booking.lng?.toString() || ""
+            }
+          });
+        }
+        break;
+      }
+    }
+
+    // B) MANUAL MODE NOTIFICATIONS
+    if (!assigned) {
+      for (const vendor of filteredVendors) {
+        if (vendor.job_mode !== "manual") continue;
+
+        const [[existing]] = await conn.query(
+          `SELECT id FROM booking_vendor_assignments WHERE booking_id=? AND vendor_id=?`,
+          [booking_id, vendor.id]
+        );
+        if (existing) continue;
+
+        await conn.query(
+          `INSERT INTO booking_vendor_assignments (id, booking_id, vendor_id, status) VALUES (?, ?, ?, ?)`,
+          [uuidv4(), booking_id, vendor.id, "pending"]
+        );
+
+        // Save DB Notification
+        await createVendorNotification({
+          vendor_id: vendor.id,
+          type: "job",
+          title: "New Job Available",
+          message: "A new service request is available near your location.",
+          booking_id
+        });
+
+        // 🔥 SOCKET EMIT (FIXED EVENT NAME: "new_job")
+        const socketId = global.activeVendors?.[vendor.id];
+        if (global.io && socketId) {
+          global.io.to(socketId).emit("new_job", {
+            booking_id,
+            mode: "manual",
+            lat: booking.lat,
+            lng: booking.lng,
+            total_amount: booking.final_amount
+          });
+        }
+
+        // 🔥 FCM PUSH NOTIFICATION (Manual Job)
+        const [vendorRow] = await conn.query(`SELECT fcm_token FROM vendors WHERE id=?`, [vendor.id]);
+        if (vendorRow?.length > 0 && vendorRow[0].fcm_token && adminSdk) {
+          const [[customer]] = await conn.query(`SELECT name FROM users WHERE id=?`, [booking.user_id]);
+          const [[serviceInfo]] = await conn.query(
+            `SELECT ss.sub_service_name FROM booking_items bi JOIN sub_services ss ON ss.id = bi.sub_service_id WHERE bi.booking_id=? LIMIT 1`,
+            [booking_id]
+          );
+
+          const distanceKm = Number(vendor.distance || 0).toFixed(1);
+
+          await adminSdk.messaging().send({
+            token: vendorRow[0].fcm_token,
+            notification: {
+              title: "New Job Available",
+              body: `Customer: ${customer?.name || "Customer"} | ${distanceKm} km | ${serviceInfo?.sub_service_name || "Service"}`
+            },
+            data: {
+              booking_id: booking_id.toString(),
+              type: "new_job",
+              mode: "manual",
+              user_name: (customer?.name || "Customer").toString(),
+              distance_km: distanceKm.toString(),
+              service_name: (serviceInfo?.sub_service_name || "Service").toString(),
+              lat: booking.lat?.toString() || "",
+              lng: booking.lng?.toString() || ""
+            }
+          });
+        }
+      }
+    }
+
+    await conn.commit();
+    return { assigned, assignedVendorId };
+  } catch (err) {
+    await conn.rollback();
+    console.error("🔥 performVendorAssignment ERROR:", err.message);
+    return { assigned: false };
+  } finally {
+    conn.release();
+  }
+};
+
+
+--------------------------------------------------------------------
+PART 2: FLUTTER VENDOR APP SOCKET SERVICE (lib/services/socket_service.dart)
+--------------------------------------------------------------------
+
+import 'package:socket_io_client/socket_io_client.dart' as IO;
+
+class SocketService {
+  static IO.Socket? socket;
+
+  static void initSocket(String vendorId) {
+    if (socket != null) {
+      socket!.emit("vendor_online", vendorId);
+      return;
+    }
+
+    socket = IO.io(
+      "https://tapasyaserver.sreerasthusilvers.co.in",
+      IO.OptionBuilder()
+          .setTransports(['websocket'])
+          .enableAutoConnect()
+          .build(),
+    );
+
+    socket!.connect();
+    socket!.onConnect((_) {
+      print("✅ Connected: ${socket!.id}");
+      socket!.emit("vendor_online", vendorId);
+    });
+  }
+
+  /// Listens for new manual job alerts
+  static void listenForJobs(Function(dynamic) onNewJob) {
+    if (socket == null) return;
+    socket!.off("new_job");
+    socket!.on("new_job", (data) {
+      print("🔥 New Job Received: $data");
+      onNewJob(data);
+    });
+  }
+
+  /// Listens for auto-assigned jobs
+  static void listenForJobAssigned(Function(dynamic) onJobAssigned) {
+    if (socket == null) return;
+    socket!.off("job_assigned");
+    socket!.on("job_assigned", (data) {
+      print("⚡ Auto Assigned Received: $data");
+      onJobAssigned(data);
+    });
+  }
+}
+
+
+--------------------------------------------------------------------
+PART 3: FLUTTER JOB ALERT HANDLER (lib/core/utils/job_alert_handler.dart)
+--------------------------------------------------------------------
+
+class JobAlertHandler {
+  static void Function(Map<String, dynamic> data)? showJobPopup;
+
+  static Future<void> handleIncomingJob(
+    BuildContext? context,
+    Map<String, dynamic> rawData, {
+    VoidCallback? onManualPopup,
+    String? eventSource,
+    bool showTrayNotification = false,
+  }) async {
+    if (!await NotificationHelper.canReceiveJobAlerts()) return;
+
+    final data = JobPayloadUtils.normalize(rawData, eventSource: eventSource);
+    final bookingId = JobPayloadUtils.extractBookingId(data);
+    if (bookingId == null) return;
+
+    if (await NotificationHelper.isJobHandled(bookingId)) return;
+
+    if (showJobPopup != null) {
+      showJobPopup!(data);
+    } else {
+      final nav = context ?? navigatorKey.currentContext;
+      if (nav != null && nav.mounted) {
+        nav.push('/job-request', extra: data);
+      }
+    }
+  }
+}

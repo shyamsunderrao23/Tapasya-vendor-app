@@ -1,0 +1,59 @@
+### Get Vendor Profile API Details
+
+**Endpoint**: `GET /vendors/profile-full`
+**Method**: `GET`
+**Content-Type**: `application/json`
+**Authorization**: Bearer Token required in headers
+
+---
+
+### Request Information
+This is a standard GET request, so it does not require a request body. It fetches the complete vendor profile, including business statistics (like total jobs, total earnings, ratings, etc.) along with the basic profile details.
+
+**Headers required:**
+- `Authorization: Bearer <your_jwt_token>`
+
+---
+
+### Expected JSON Response
+
+**Success Response (200 OK):**
+```json
+{
+  "success": true,
+  "data": {
+    "vendor": {
+      "id": 1,
+      "name": "John Doe",
+      "phone": "9876543210",
+      "email": "johndoe@example.com",
+      "address": "123 Main Street",
+      "fathers_name": "Robert Doe",
+      "dob": "1990-05-15",
+      "gender": "Male",
+      "whatsapp_number": "9876543210",
+      "secondary_mobile_number": "9123456780",
+      "city": "Mumbai",
+      "languages": ["English", "Hindi"],
+      "job_mode": "auto",
+      "profile_pic": "https://example.com/uploads/profile.jpg",
+      "rating": 4.5,
+      "status": "active"
+    },
+    "stats": {
+      "total_jobs": 150,
+      "total_earnings": 45000,
+      "average_rating": 4.5,
+      "completion_rate": 98
+    }
+  }
+}
+```
+
+**Error Response (e.g., 401 Unauthorized or 404 Not Found):**
+```json
+{
+  "success": false,
+  "message": "Error description here"
+}
+```

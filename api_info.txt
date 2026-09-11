@@ -1,0 +1,11 @@
+The dynamic stats in the Profile header are being populated by two different API endpoints:
+
+1. `fullProfile` data (for total_jobs and total_earnings):
+   - Dart Method: `getProfileFull(String token)`
+   - API Endpoint: GET `baseurl/vendors/profile-full`
+   - Provider Variable: `provider.profileFullData`
+
+2. `reviews` data (for average_rating):
+   - Dart Method: `getReviewsFull(String token, {int? rating, int page = 1, int limit = 10})`
+   - API Endpoint: GET `baseurl/vendors/reviews-full?page=1&limit=10`
+   - Provider Variable: `provider.reviewsFullData`
