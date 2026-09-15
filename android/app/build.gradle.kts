@@ -5,7 +5,9 @@ val keystoreProperties = Properties()
 val keystorePropertiesFile = rootProject.file("key.properties")
 
 if (keystorePropertiesFile.exists()) {
-    keystoreProperties.load(FileInputStream(keystorePropertiesFile))
+    FileInputStream(keystorePropertiesFile).use {
+        keystoreProperties.load(it)
+    }
 }
 
 plugins {
@@ -17,7 +19,8 @@ plugins {
 
     id("kotlin-android")
 
-    // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
+    // The Flutter Gradle Plugin must be applied after
+    // the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
 }
 
@@ -35,14 +38,43 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
+    /*
+     * RELEASE SIGNING
+     *
+     * Only configure the release keystore when key.properties
+     * exists and contains all required values.
+     *
+     * This prevents:
+     * "null cannot be cast to non-null type kotlin.String"
+     */
     signingConfigs {
-        create("release") {
-            keyAlias = keystoreProperties["keyAlias"] as String
-            keyPassword = keystoreProperties["keyPassword"] as String
-            storeFile = rootProject.file(
-                keystoreProperties["storeFile"] as String
-            )
-            storePassword = keystoreProperties["storePassword"] as String
+        if (keystorePropertiesFile.exists()) {
+
+            val keyAliasValue =
+                keystoreProperties.getProperty("keyAlias")
+
+            val keyPasswordValue =
+                keystoreProperties.getProperty("keyPassword")
+
+            val storeFileValue =
+                keystoreProperties.getProperty("storeFile")
+
+            val storePasswordValue =
+                keystoreProperties.getProperty("storePassword")
+
+            if (
+                !keyAliasValue.isNullOrBlank() &&
+                !keyPasswordValue.isNullOrBlank() &&
+                !storeFileValue.isNullOrBlank() &&
+                !storePasswordValue.isNullOrBlank()
+            ) {
+                create("release") {
+                    keyAlias = keyAliasValue
+                    keyPassword = keyPasswordValue
+                    storeFile = rootProject.file(storeFileValue)
+                    storePassword = storePasswordValue
+                }
+            }
         }
     }
 
@@ -58,17 +90,31 @@ android {
 
     buildTypes {
         release {
-            signingConfig = signingConfigs.getByName("release")
+            /*
+             * Use release signing only if it was successfully created.
+             *
+             * Otherwise Gradle can still build the project without
+             * crashing because of a missing key.properties value.
+             */
+            if (signingConfigs.names.contains("release")) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
     }
 }
 
 dependencies {
-    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
+    coreLibraryDesugaring(
+        "com.android.tools:desugar_jdk_libs:2.1.4"
+    )
 
-    implementation("androidx.core:core-ktx:1.15.0")
+    implementation(
+        "androidx.core:core-ktx:1.15.0"
+    )
 
-    implementation("com.google.firebase:firebase-messaging:24.1.0")
+    implementation(
+        "com.google.firebase:firebase-messaging:24.1.0"
+    )
 }
 
 kotlin {
